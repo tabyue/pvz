@@ -152,11 +152,23 @@ function drawLawn() {
   ctx.fillRect((COLS - 0.3) * cellW, 0, cellW * 0.3, canvasH);
 }
 
-function drawEmoji(emoji, cx, cy, size) {
-  ctx.font = size + 'px serif';
+function drawEmoji(emoji, cx, cy, size, shadow) {
+  ctx.save();
+  ctx.font = size + 'px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji","Twemoji Mozilla",sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
+  ctx.globalAlpha = 1;
+  if (shadow) {
+    ctx.shadowColor = 'rgba(0,0,0,0.5)';
+    ctx.shadowBlur = 4;
+    ctx.shadowOffsetX = 1;
+    ctx.shadowOffsetY = 2;
+  }
+  // 双重绘制让 emoji 更实、更不透明
   ctx.fillText(emoji, cx, cy);
+  ctx.shadowColor = 'transparent';
+  ctx.fillText(emoji, cx, cy);
+  ctx.restore();
 }
 
 function drawPlants() {
@@ -164,9 +176,14 @@ function drawPlants() {
     const cx = (p.col + 0.5) * cellW;
     const cy = (p.row + 0.5) * cellH;
     const def = PLANT_DEF[p.type];
+    // 格子底色高亮，让植物位置更明显
+    ctx.fillStyle = 'rgba(255,255,255,0.12)';
+    ctx.beginPath();
+    ctx.roundRect(p.col * cellW + 2, p.row * cellH + 2, cellW - 4, cellH - 4, 4);
+    ctx.fill();
     // 受伤抖动
     const shake = p.hurtTimer > 0 ? (Math.random() - 0.5) * 3 : 0;
-    drawEmoji(def.emoji, cx + shake, cy + shake, cellW * 0.55);
+    drawEmoji(def.emoji, cx + shake, cy + shake, cellW * 0.65, true);
     // 血条
     if (p.hp < def.hp) {
       const bw = cellW * 0.6;
@@ -184,14 +201,13 @@ function drawBullets() {
   for (const b of bullets) {
     ctx.fillStyle = b.color;
     ctx.beginPath();
-    ctx.arc(b.x, b.y, 4, 0, Math.PI * 2);
+    ctx.arc(b.x, b.y, 5, 0, Math.PI * 2);
     ctx.fill();
-    if (b.slow) {
-      ctx.fillStyle = 'rgba(103,232,249,0.3)';
-      ctx.beginPath();
-      ctx.arc(b.x, b.y, 6, 0, Math.PI * 2);
-      ctx.fill();
-    }
+    // 光晕
+    ctx.fillStyle = b.slow ? 'rgba(103,232,249,0.35)' : 'rgba(34,197,94,0.25)';
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, 8, 0, Math.PI * 2);
+    ctx.fill();
   }
 }
 
@@ -200,15 +216,20 @@ function drawZombies() {
     const cx = z.x;
     const cy = (z.row + 0.5) * cellH;
     const def = ZOMBIE_DEF[z.type];
+    // 僵尸底部光晕，增强可见度
+    ctx.fillStyle = 'rgba(180,30,30,0.18)';
+    ctx.beginPath();
+    ctx.arc(cx, cy, cellW * 0.38, 0, Math.PI * 2);
+    ctx.fill();
     // 减速效果
     if (z.slowTimer > 0) {
-      ctx.fillStyle = 'rgba(103,232,249,0.15)';
+      ctx.fillStyle = 'rgba(103,232,249,0.25)';
       ctx.beginPath();
-      ctx.arc(cx, cy, cellW * 0.35, 0, Math.PI * 2);
+      ctx.arc(cx, cy, cellW * 0.38, 0, Math.PI * 2);
       ctx.fill();
     }
     const shake = z.hurtTimer > 0 ? (Math.random() - 0.5) * 2 : 0;
-    drawEmoji(def.emoji, cx + shake, cy, cellW * 0.55);
+    drawEmoji(def.emoji, cx + shake, cy, cellW * 0.65, true);
     // 血条
     const bw = cellW * 0.5;
     const bx = cx - bw / 2;
@@ -222,13 +243,14 @@ function drawZombies() {
 
 function drawSuns() {
   for (const s of suns) {
-    drawEmoji('☀️', s.x, s.y, 22);
-    // 闪烁效果
+    ctx.save();
     if (s.life < 2000) {
-      ctx.globalAlpha = s.life / 2000;
-      drawEmoji('☀️', s.x, s.y, 22);
+      ctx.globalAlpha = Math.max(0.2, s.life / 2000);
+    } else {
       ctx.globalAlpha = 1;
     }
+    drawEmoji('☀️', s.x, s.y, 26, true);
+    ctx.restore();
   }
 }
 
